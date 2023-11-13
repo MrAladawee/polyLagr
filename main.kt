@@ -28,7 +28,9 @@ import androidx.compose.ui.window.application
 import java.awt.MouseInfo
 import java.awt.Point
 import java.awt.event.MouseEvent
+import javax.xml.crypto.Data
 import kotlin.Exception
+import kotlin.math.abs
 
 fun Interpolation(Ox : Array<Double>, Oy : Array<Double>, xval : Double) : Double
 {
@@ -68,6 +70,16 @@ fun Interpolation(Ox : Array<Double>, Oy : Array<Double>, xvals : Array<Int>) : 
     return yvals;
 }
 
+fun Interpolation(Ox : Array<Double>, Oy : Array<Double>, xvals : Array<Double>) : Array<Double>
+{
+    var yvals = Array(xvals.size) { 0.0 }
+
+    for (i in 0 .. xvals.size - 1) {
+        yvals[i] = Interpolation(Ox, Oy, xvals[i])
+    }
+
+    return yvals;
+}
 
 fun convertToScreen(cartesianx : Double, cartesiany : Double, screenwidth : Int, screenheight : Int) : Pair<Double, Double> {
     return Pair(cartesianx + screenwidth / 2, -cartesiany + screenheight / 2)
@@ -77,6 +89,15 @@ fun converToDec(screenx : Double, screeny : Double, screenwidth : Int, screenhei
     return Pair(screenx - screenwidth / 2, -screeny + screenheight / 2)
 }
 
+fun converToDecX(screenx : Double, screenwidth : Int, screenheight : Int) : Double{
+    return screenx - screenwidth / 2
+}
+
+fun converToDecY(screeny : Double, screenwidth : Int, screenheight : Int) : Double{
+    return -screeny + screenheight / 2
+}
+
+var DataSetScale : Array<Pair<Int,Int>> = Array<Pair<Int,Int>>(2) {Pair(0,0)}
 
 @OptIn(ExperimentalTextApi::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -109,14 +130,32 @@ fun App() {
 
         var (point_dec_x, point_dec_y) = converToDec(point.x.toDouble(), point.y.toDouble(), this.size.width, this.size.height)
 
+
         points_cart[point_dec_x] = point_dec_y
         points_screen[point.x.toDouble()] = point.y.toDouble()
 
     },
         onDraw = {
 
-            var width = this.size.width.toInt()
-            var height = this.size.height.toInt()
+            var width : Int
+            var height : Int
+
+            if (DataSetScale[0] == Pair(0,0)) {
+                width = this.size.width.toInt()
+                height = this.size.height.toInt()
+                DataSetScale[0] = Pair(width,height)
+            }
+            else if (DataSetScale[0] != Pair(0,0) && DataSetScale[1] == Pair(0,0)) {
+                width = this.size.width.toInt()
+                height = this.size.height.toInt()
+                DataSetScale[1] = Pair(width,height)
+            }
+            else {
+                DataSetScale[0] = DataSetScale[1]
+                width = this.size.width.toInt()
+                height = this.size.height.toInt()
+                DataSetScale[1] = Pair(width,height)
+            }
 
             var yMax = this.size.height*(xMax-xMin)/this.size.width + yMin
 
@@ -173,11 +212,12 @@ fun App() {
 
                 drawCircle(
                     color = Color.Red,
-                    radius = 10f,
+                    radius = 3f,
                     center = Offset(pointScreeX.toFloat(), pointScreenY.toFloat())
                 )
             }
 
+            /* РАБОТА С СКРИН ПОИНТ
             // Узловые points
             var Ox_screen: Array<Double> = Array(points_screen.size) { 0.0 }
             var Oy_screen: Array<Double> = Array(points_screen.size) { 0.0 }
@@ -205,7 +245,46 @@ fun App() {
                     end = Offset(xvals_screen[i].toFloat(), yvals_screen[i].toFloat())
                 )
             }
+            */
 
+            // Узловые points
+            var Ox_cart: Array<Double> = Array(points_screen.size) { 0.0 }
+            var Oy_cart: Array<Double> = Array(points_screen.size) { 0.0 }
+
+            var count = 0
+            for (point in points_cart) {
+                Ox_cart[count] = point.key
+                Oy_cart[count] = point.value
+                count++
+            }
+
+            // All pixels
+
+            var xvals_cart = Array<Double>(width) {0.0}
+
+            for (i in 0..width-1) {
+
+                xvals_cart[i] = converToDecX(i.toDouble(), width, height)
+
+            }
+
+            var yvals_cart: Array<Double>
+            yvals_cart = Interpolation(Ox_cart, Oy_cart, xvals_cart)
+
+            for (i in 1..xvals_cart.size - 1) {
+
+
+                var (first_x_screen, frist_y_screen) = convertToScreen(xvals_cart[i - 1], yvals_cart[i - 1], width, height)
+                var (second_x_screen, second_y_screen) = convertToScreen(xvals_cart[i], yvals_cart[i], width, height)
+
+
+
+                drawLine(
+                    color = Color.Blue,
+                    start = Offset(first_x_screen.toFloat(), frist_y_screen.toFloat()),
+                    end = Offset(second_x_screen.toFloat(), second_y_screen.toFloat())
+                )
+            }
 
             /*if (points.size != 0) {
                 var coord = Array<Point>(this.size.width.toInt()) {Point(0,0)}
@@ -250,6 +329,7 @@ fun App() {
 
             }
              */
+
         })
 
     // Text and edit values of Mins & Maxs x,y
