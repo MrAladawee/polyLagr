@@ -150,8 +150,8 @@ fun App() {
             // Axis OX
             drawLine(
                 color = Color.Black,
-                start = Offset(0f, (this.size.height * (0 - xMin) / (xMax - xMin)).toFloat()),
-                end = Offset(this.size.width, (this.size.height * (0 - xMin) / (xMax - xMin)).toFloat())
+                start = Offset(0f, this.size.height * (1 + yMinMax) / 2),
+                end = Offset(this.size.width, this.size.height * (1 + yMinMax) / 2)
             )
 
             // Axis OY
